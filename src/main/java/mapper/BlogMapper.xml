@@ -1,0 +1,541 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!--<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">-->
+
+<mapper namespace="mapper.BlogMapper">
+
+	<!-- crud	-->
+	<select id="selectBlog" resultType="Blog">
+		select * from Blog where id = #{id}
+	</select>
+
+	<insert id="insertAuthor">
+		insert into Author (id,username,password,email,bio)
+		values (#{id},#{username},#{password},#{email},#{bio})
+	</insert>
+
+	<insert id="insertAuthor" useGeneratedKeys="true"
+			keyProperty="id">
+		insert into Author (username, password, email, bio) values
+		<foreach item="item" collection="list" separator=",">
+			(#{item.username}, #{item.password}, #{item.email}, #{item.bio})
+		</foreach>
+	</insert>
+
+	<insert id="insertAuthor">
+		<selectKey keyProperty="id" resultType="int" order="BEFORE">
+			select CAST(RANDOM()*1000000 as INTEGER) a from SYSIBM.SYSDUMMY1
+		</selectKey>
+		insert into Author
+		(id, username, password, email,bio, favourite_section)
+		values
+		(#{id}, #{username}, #{password}, #{email}, #{bio}, #{favouriteSection,jdbcType=VARCHAR})
+	</insert>
+
+	<insert id="insertUser" parameterType="User">
+		insert into users (id, username, password, middleInitial)
+		values (#{id}, #{username}, #{password},
+		#{middleInitial,jdbcType=VARCHAR})  <!-- 可能为空的值必须用jdbcType追加说明，不然Mybatis无法自我判断使用哪个TypeHandle-->
+	</insert>
+
+	<update id="updateAuthor">
+		update Author set
+		username = #{username},
+		password = #{password},
+		email = #{email},
+		bio = #{bio}
+		where id = #{id}
+	</update>
+
+	<delete id="deleteAuthor">
+		delete from Author where id = #{id}
+	</delete>
+
+	<select
+			id="selectPerson"
+			parameterType="int"
+			resultType="hashmap"
+			resultMap="personResultMap"
+			flushCache="false"
+			useCache="true"
+			timeout="10"
+			fetchSize="256"
+			statementType="PREPARED"
+			resultSetType="FORWARD_ONLY">
+
+	</select>
+
+	<insert
+			id="insertAuthor"
+			parameterType="domain.blog.Author"
+			flushCache="true"
+			statementType="PREPARED"
+			keyProperty=""
+			keyColumn=""
+			useGeneratedKeys=""
+			timeout="20">
+	</insert>
+
+	<update
+			id="updateAuthor"
+			parameterType="domain.blog.Author"
+			flushCache="true"
+			statementType="PREPARED"
+			timeout="20">
+	</update>
+
+	<delete
+			id="deleteAuthor"
+			parameterType="domain.blog.Author"
+			flushCache="true"
+			statementType="PREPARED"
+			timeout="20">
+	</delete>
+
+	<selectKey
+			keyProperty="id"
+			resultType="int"
+			order="BEFORE"
+			statementType="PREPARED">
+	</selectKey>
+
+	<!-- sql片段	-->
+	<sql id="userColumns"> ${alias}.id,${alias}.username,${alias}.password </sql>
+
+
+	<select id="selectUsers" resultType="map">
+		select
+		<include refid="userColumns"><property name="alias" value="t1"/></include>,
+		<include refid="userColumns"><property name="alias" value="t2"/></include>
+		from some_table t1
+		cross join some_table t2
+	</select>
+
+	<!-- sql片段结合property使用	-->
+	<sql id="sometable">
+		${prefix}Table
+	</sql>
+
+	<sql id="someinclude">
+		from
+		<include refid="${include_target}"/>
+	</sql>
+
+	<select id="select" resultType="map">
+		select
+		field1, field2, field3
+		<include refid="someinclude">
+			<property name="prefix" value="Some"/>
+			<property name="include_target" value="sometable"/>
+		</include>
+	</select>
+
+	<!-- #{}和${}的区别，#{}是替换为sql的?通配符，${}是将其值直接替换到这个sql语句上	-->
+	<select id="findByColumn">
+		select * from user where ${column} = #{value}   <!-- select * from user where name = ? -->
+	</select>
+
+	<!-- resultType和resultMap的区别，下面2种情况实现的效果一致，resultType更聪明，resultMap则可显示的控制如何映射	-->
+	<select id="selectUsers" resultType="User">
+		select id, username, hashedPassword
+		from some_table
+		where id = #{id}
+	</select>
+
+	<resultMap id="userResultMap" type="User">
+		<id property="id" column="user_id" /> <!-- 用id标签来指定主键列可以提升mybatis的运行性能 -->
+		<result property="username" column="user_name"/>
+		<result property="password" column="hashed_password"/>
+	</resultMap>
+
+	<select id="selectUsers" resultMap="userResultMap">
+		select user_id, user_name, hashed_password
+		from some_table
+		where id = #{id}
+	</select>
+
+	<!-- jdbcType支持的所有JDBC类型 http://www.mybatis.org/mybatis-3/zh/sqlmap-xml.html ，搜索词条，支持的 JDBC 类型	-->
+
+	BIT	FLOAT	CHAR	TIMESTAMP	OTHER	UNDEFINED
+	TINYINT	REAL	VARCHAR	BINARY	BLOB	NVARCHAR
+	SMALLINT	DOUBLE	LONGVARCHAR	VARBINARY	CLOB	NCHAR
+	INTEGER	NUMERIC	DATE	LONGVARBINARY	BOOLEAN	NCLOB
+	BIGINT	DECIMAL	TIME	NULL	CURSOR	ARRAY
+
+	<!-- resultMap复杂应用	-->
+	<select id="selectBlogDetails" resultMap="detailedBlogResultMap">
+		select
+		B.id as blog_id,
+		B.title as blog_title,
+		B.author_id as blog_author_id,
+		A.id as author_id,
+		A.username as author_username,
+		A.password as author_password,
+		A.email as author_email,
+		A.bio as author_bio,
+		A.favourite_section as author_favourite_section,
+		P.id as post_id,
+		P.blog_id as post_blog_id,
+		P.author_id as post_author_id,
+		P.created_on as post_created_on,
+		P.section as post_section,
+		P.subject as post_subject,
+		P.draft as draft,
+		P.body as post_body,
+		C.id as comment_id,
+		C.post_id as comment_post_id,
+		C.name as comment_name,
+		C.comment as comment_text,
+		T.id as tag_id,
+		T.name as tag_name
+		from Blog B
+		left outer join Author A on B.author_id = A.id
+		left outer join Post P on B.id = P.blog_id
+		left outer join Comment C on P.id = C.post_id
+		left outer join Post_Tag PT on PT.post_id = P.id
+		left outer join Tag T on PT.tag_id = T.id
+		where B.id = #{id}
+	</select>
+
+	<resultMap id="detailedBlogResultMap" type="Blog">
+		<!-- 构造器映射数据		-->
+		<constructor>
+			<idArg column="blog_id" javaType="int"/>
+		</constructor>
+		<result property="title" column="blog_title"/>
+		<!-- 关联对象映射数据，Blog内部的Author对象，处理数据关系的一对一情况		-->
+		<association property="author" javaType="Author">
+			<id property="id" column="author_id"/>
+			<result property="username" column="author_username"/>
+			<result property="password" column="author_password"/>
+			<result property="email" column="author_email"/>
+			<result property="bio" column="author_bio"/>
+			<result property="favouriteSection" column="author_favourite_section"/>
+		</association>
+		<!-- 关联也可以在调用另一个select，不过这种在大型数据库的效率很低，因为是N+1 查询问题		-->
+		<association property="author" column="author_id" javaType="Author" select="selectAuthor"/>
+		<!-- 关联也可以使用另一个resultMap来处理映射逻辑		-->
+		<association property="author" column="blog_author_id" javaType="Author" resultMap="authorResult"/>
+		<!-- 集合，处理一对多 ，一个Author里有一个List<Post>		-->
+		<collection property="posts" ofType="Post">
+			<id property="id" column="post_id"/>
+			<result property="subject" column="post_subject"/>
+			<association property="author" javaType="Author"/>
+			<collection property="comments" ofType="Comment">
+				<id property="id" column="comment_id"/>
+			</collection>
+			<collection property="tags" ofType="Tag" >
+				<id property="id" column="tag_id"/>
+			</collection>
+			<!-- 鉴别器类似java的switch，下面有专门的实例			-->
+			<discriminator javaType="int" column="draft">
+				<case value="1" resultType="DraftPost"/>
+			</discriminator>
+		</collection>
+		<!-- 和关联一样，同样可以使用select来嵌套使用，ofType表示集合内存储的java类型		-->
+		<collection property="posts" javaType="ArrayList" column="id" ofType="Post" select="selectPostsForBlog"/>
+	</resultMap>
+
+	<select id="selectAuthor" resultType="Author">
+		SELECT * FROM AUTHOR WHERE ID = #{id}
+	</select>
+
+	<select id="selectPostsForBlog" resultType="Post">
+		SELECT * FROM POST WHERE BLOG_ID = #{id}
+	</select>
+
+	<resultMap id="authorResult" type="Author">
+		<id property="id" column="author_id"/>
+		<result property="username" column="author_username"/>
+		<result property="password" column="author_password"/>
+		<result property="email" column="author_email"/>
+		<result property="bio" column="author_bio"/>
+	</resultMap>
+
+	<!-- resultSet 用于返回多结果集使用，官方例子写的不多，暂不考虑学习	-->
+
+	<!-- 重用resultMap，使用columnPrefix定义列前缀，通过一个良好的对列别名的定义，可以重用同一个resultMap，比如下面一个Blog有两个不同的Author，则可重用	-->
+	<select id="selectBlog" resultMap="blogResult">
+		select
+		B.id            as blog_id,
+		B.title         as blog_title,
+		A.id            as author_id,
+		A.username      as author_username,
+		A.password      as author_password,
+		A.email         as author_email,
+		A.bio           as author_bio,
+		CA.id           as co_author_id,
+		CA.username     as co_author_username,
+		CA.password     as co_author_password,
+		CA.email        as co_author_email,
+		CA.bio          as co_author_bio
+		from Blog B
+		left outer join Author A on B.author_id = A.id
+		left outer join Author CA on B.co_author_id = CA.id
+		where B.id = #{id}
+	</select>
+
+	<resultMap id="authorResult" type="Author">
+		<id property="id" column="author_id"/>
+		<result property="username" column="author_username"/>
+		<result property="password" column="author_password"/>
+		<result property="email" column="author_email"/>
+		<result property="bio" column="author_bio"/>
+	</resultMap>
+
+	<resultMap id="blogResult" type="Blog">
+		<id property="id" column="blog_id" />
+		<result property="title" column="blog_title"/>
+		<association property="author"
+				resultMap="authorResult" />
+		<association property="coAuthor"
+				resultMap="authorResult"
+				columnPrefix="co_" />
+	</resultMap>
+
+
+	<!-- 鉴别器，作用类似java的switch，比如下面的例子意思是，如果vehicle_type=1，那么嵌套使用carResult来填充属性值，多填充一个door_count	-->
+	<resultMap id="vehicleResult" type="Vehicle">
+		<id property="id" column="id" />
+		<result property="vin" column="vin"/>
+		<result property="year" column="year"/>
+		<result property="make" column="make"/>
+		<result property="model" column="model"/>
+		<result property="color" column="color"/>
+		<discriminator javaType="int" column="vehicle_type">
+			<case value="1" resultMap="carResult"/>
+			<case value="2" resultMap="truckResult"/>
+			<case value="3" resultMap="vanResult"/>
+			<case value="4" resultMap="suvResult"/>
+		</discriminator>
+	</resultMap>
+
+	<!-- 鉴别器不适用extends的情况，这会导致结果映射直接采用这个映射map，会忽略掉vehicleResult前面的那些result映射	-->
+	<resultMap id="carResult" type="Car">
+		<result property="doorCount" column="door_count" />
+	</resultMap>
+	<!-- 使用extends,这样就不会忽略vehicleResult前面的那些result映射，用时使用。resultMap的extends特性很不错，可以少写重复的映射关系	-->
+	<resultMap id="carResult" type="Car" extends="vehicleResult">
+		<result property="doorCount" column="door_count" />
+	</resultMap>
+	<!-- 当然像刚刚那样分开写太繁琐了，所以mybatis还提供下面这样直接在case标签内写映射关系，效果一直-->
+	<resultMap id="vehicleResult" type="Vehicle">
+		<id property="id" column="id" />
+		<result property="vin" column="vin"/>
+		<result property="year" column="year"/>
+		<result property="make" column="make"/>
+		<result property="model" column="model"/>
+		<result property="color" column="color"/>
+		<discriminator javaType="int" column="vehicle_type">
+			<case value="1" resultType="carResult">
+				<result property="doorCount" column="door_count" />
+			</case>
+			<case value="2" resultType="truckResult">
+				<result property="boxSize" column="box_size" />
+				<result property="extendedCab" column="extended_cab" />
+			</case>
+			<case value="3" resultType="vanResult">
+				<result property="powerSlidingDoor" column="power_sliding_door" />
+			</case>
+			<case value="4" resultType="suvResult">
+				<result property="allWheelDrive" column="all_wheel_drive" />
+			</case>
+		</discriminator>
+	</resultMap>
+
+	<!-- Auto-Mapping，自动映射，说白了就就是mybatis会在你使用显示映射的时候，如果缺胳膊少腿了自动使用隐式映射给你一一映射	-->
+	<select id="selectUsers" resultMap="userResultMap">
+		select
+		user_id             as "id",
+		user_name           as "userName",
+		hashed_password
+		from some_table
+		where id = #{id}
+	</select>
+	<!-- id和userName被隐式映射	-->
+	<resultMap id="userResultMap" type="User">
+		<result property="password" column="hashed_password"/>
+	</resultMap>
+
+	<!-- 自动映射有三个等级	-->
+	NONE - 禁用自动映射。仅对手动映射的属性进行映射。
+	PARTIAL - 对除在内部定义了嵌套结果映射（也就是连接的属性）以外的属性进行映射（默认）
+	FULL - 自动映射所有属性。（别用就完事了，由于提供的信息不够会导致mybatis搞不清楚具体给哪个，如果想实现了这个功能估计会带了定义resultMap的复杂性，所以官方目前都把它当弃婴）
+
+	<!-- 使用autoMapping属性来开启和关闭这个自动映射功能	-->
+	<resultMap id="userResultMap" type="User" autoMapping="false">
+		<result property="password" column="hashed_password"/>
+	</resultMap>
+
+	<!-- 简单的启用二级缓存，默认配置	-->
+	<cache/>
+	<!-- mybatis 二级缓存的规则	-->
+	只有当前的映射文件内的sql会启用二级缓存*
+	映射语句文件中的所有 select 语句的结果将会被缓存。
+	映射语句文件中的所有 insert、update 和 delete 语句会刷新缓存。
+	缓存会使用最近最少使用算法（LRU, Least Recently Used）算法来清除不需要的缓存。
+	缓存不会定时进行刷新（也就是说，没有刷新间隔）。
+	缓存会保存列表或对象（无论查询方法返回哪种）的 1024 个引用。
+	缓存会被视为读/写缓存，这意味着获取到的对象并不是共享的，可以安全地被调用者修改，而不干扰其他调用者或线程所做的潜在修改。
+	<!-- 自定义配置启用二级缓存 	-->
+	<cache
+			eviction="FIFO"
+			flushInterval="60000"
+			size="512"
+			readOnly="true"/>
+
+	eviction可选值：
+	LRU – 最近最少使用：移除最长时间不被使用的对象。
+	FIFO – 先进先出：按对象进入缓存的顺序来移除它们。
+	SOFT – 软引用：基于垃圾回收器状态和软引用规则移除对象。
+	WEAK – 弱引用：更积极地基于垃圾收集器状态和弱引用规则移除对象。
+
+	flushInterval（刷新间隔）属性可以被设置为任意的正整数，设置的值应该是一个以毫秒为单位的合理时间量。 默认情况是不设置，也就是没有刷新间隔，缓存仅仅会在调用语句时刷新。
+
+	size（引用数目）属性可以被设置为任意正整数，要注意欲缓存对象的大小和运行环境中可用的内存资源。默认值是 1024。
+
+	readOnly（只读）属性可以被设置为 true 或 false。只读的缓存会给所有调用者返回缓存对象的相同实例。 因此这些对象不能被修改。这就提供了可观的性能提升。而可读写的缓存会（通过序列化）返回缓存对象的拷贝。 速度上会慢一些，但是更安全，因此默认值是 false。
+
+	<!-- 自定义缓存类，见 http://www.mybatis.org/mybatis-3/zh/sqlmap-xml.html	-->
+	<cache type="com.domain.something.MyCustomCache"/>
+
+	<!-- 由于cache是的作用域为一个Mapper文件内的，所以想在别的mapper用同一个cache配置，可以使用cache-ref	-->
+	<cache-ref namespace="com.someone.application.data.SomeMapper"/>
+
+
+	<!-- 动态sql	-->
+
+	<!-- if	-->
+	<select id="findActiveBlogWithTitleLike"
+			resultType="Blog">
+		SELECT * FROM BLOG
+		WHERE state = ‘ACTIVE’
+		<if test="title != null">
+			AND title like #{title}
+		</if>
+	</select>
+
+	<select id="findActiveBlogLike"
+			resultType="Blog">
+		SELECT * FROM BLOG WHERE state = ‘ACTIVE’
+		<if test="title != null">
+			AND title like #{title}
+		</if>
+		<if test="author != null and author.name != null">
+			AND author_name like #{author.name}
+		</if>
+	</select>
+
+	<!-- choose when otherwise	-->
+	<select id="findActiveBlogLike"
+			resultType="Blog">
+		SELECT * FROM BLOG WHERE state = ‘ACTIVE’
+		<choose>
+			<when test="title != null">
+				AND title like #{title}
+			</when>
+			<when test="author != null and author.name != null">
+				AND author_name like #{author.name}
+			</when>
+			<otherwise>
+				AND featured = 1
+			</otherwise>
+		</choose>
+	</select>
+
+	<!-- where	-->
+	<select id="findActiveBlogLike"
+			resultType="Blog">
+		SELECT * FROM BLOG
+		<where>
+			<if test="state != null">
+				state = #{state}
+			</if>
+			<if test="title != null">
+				AND title like #{title}
+			</if>
+			<if test="author != null and author.name != null">
+				AND author_name like #{author.name}
+			</if>
+		</where>
+	</select>
+
+	<!-- trim + where 最常用	-->
+	<select id="findActiveBlogLike"
+			resultType="Blog">
+		SELECT * FROM BLOG
+		<trim prefix="WHERE" prefixOverrides="AND |OR ">  <!-- 注意AND和OR后面的空格 -->
+			<if test="state != null">
+				state = #{state}
+			</if>
+			<if test="title != null">
+				AND title like #{title}
+			</if>
+			<if test="author != null and author.name != null">
+				AND author_name like #{author.name}
+			</if>
+		</trim>
+	</select>
+
+	<!-- set	-->
+	<update id="updateAuthorIfNecessary">
+		update Author
+		<set>
+			<if test="username != null">username=#{username},</if>
+			<if test="password != null">password=#{password},</if>
+			<if test="email != null">email=#{email},</if>
+			<if test="bio != null">bio=#{bio}</if> <!-- 注意最后的if不要逗号 -->
+		</set>
+		where id=#{id}
+	</update>
+
+	<!-- trim+set	-->
+	<update id="updateAuthorIfNecessary">
+		update Author
+		<trim prefix="SET" suffixOverrides=",">
+			<if test="username != null">username=#{username},</if>
+			<if test="password != null">password=#{password},</if>
+			<if test="email != null">email=#{email},</if>
+			<if test="bio != null">bio=#{bio}</if>
+		</trim>
+		where id=#{id}
+	</update>
+
+	<!-- foreach -->
+	<select id="selectPostIn" resultType="domain.blog.Post">
+		SELECT *
+		FROM POST P
+		WHERE ID in
+		<foreach item="item" index="index" collection="list"
+				open="(" separator="," close=")">
+			#{item}
+		</foreach>
+	</select>
+
+	<!-- bind，类似selectkey，不过我不是很懂，到时候查一下-->
+	<select id="selectBlogsLike" resultType="Blog">
+		<bind name="pattern" value="'%' + _parameter.getTitle() + '%'" />
+		SELECT * FROM BLOG
+		WHERE title LIKE #{pattern}
+	</select>
+
+	<!-- 多数据库支持！这个功能其实很不错！ 这个功能完美的给我解答了对databaseIdProvider的功能感觉没有用的疑惑。-->
+	<insert id="insert">
+		<selectKey keyProperty="id" resultType="int" order="BEFORE">
+			<if test="_databaseId == 'oracle'">
+				select seq_users.nextval from dual
+			</if>
+			<if test="_databaseId == 'db2'">
+				select nextval for seq_users from sysibm.sysdummy1"
+			</if>
+		</selectKey>
+		insert into users values (#{id}, #{name})
+	</insert>
+
+	<!-- 动态 SQL 中的可插拔脚本语言（Pluggable Scripting Languages For Dynamic SQL），不知道有什么方便的，暂时不学习	-->
+
+
+</mapper>
+
+
+
+
