@@ -134,7 +134,7 @@
 		select * from user where ${column} = #{value}   <!-- select * from user where name = ? -->
 	</select>
 
-	<!-- resultType和resultMap的区别，下面2种情况实现的效果一致，resultType更聪明，resultMap则可显示的控制如何映射	-->
+	<!-- resultType和resultMap的区别，下面2种情况实现的效果一致，resultType更聪明，resultMap则可显示的控制如何映射，resultMap可以实现延迟加载，resultType无法实现延迟加载。	-->
 	<select id="selectUsers" resultType="User">
 		select id, username, hashedPassword
 		from some_table

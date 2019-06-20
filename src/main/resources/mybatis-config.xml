@@ -22,7 +22,7 @@
         <setting name="useGeneratedKeys" value="false"/>
         <setting name="autoMappingBehavior" value="PARTIAL"/>
         <setting name="autoMappingUnknownColumnBehavior" value="WARNING"/>
-        <setting name="defaultExecutorType" value="SIMPLE"/>
+        <setting name="defaultExecutorType" value="SIMPLE"/>  <!-- https://www.jianshu.com/p/53cc886067b1 -->
         <setting name="defaultStatementTimeout" value="25"/>
         <setting name="defaultFetchSize" value="100"/>
         <setting name="safeRowBoundsEnabled" value="false"/>
